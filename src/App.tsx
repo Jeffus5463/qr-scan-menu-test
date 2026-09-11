@@ -1,60 +1,85 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Flame, Heart, Leaf, MapPin, Soup } from "lucide-react";
+import { categories, dishes, restaurant, type CategoryId, type Dish } from "./menu";
+import { parseTable } from "./menu-utils";
+import { DishCard } from "./DishCard";
+import { DishDialog } from "./DishDialog";
 import "./App.css";
-const categories = ["All dishes", "Mains", "Rice", "Drinks"] as const;
-type Category = (typeof categories)[number];
-const dishes = [
-  {
-    name: "Chow Mein",
-    category: "Mains",
-    price: 145,
-    image: "/menu/chow-mein.jpg",
-    label: "Wok favorite",
-    description:
-      "Springy noodles, crisp vegetables, and a savory soy sauce. Tossed over a hot wok, served with love.",
-  },
-  {
-    name: "Sweet & Sour Chicken",
-    category: "Mains",
-    price: 185,
-    image: "/menu/sweet-sour-chicken.jpg",
-    label: "House favorite",
-    description:
-      "Crispy chicken with pineapple, bell peppers, and our bright, tangy sweet and sour sauce.",
-  },
-  {
-    name: "Yang Chow Fried Rice",
-    category: "Rice",
-    price: 125,
-    image: "/menu/fried-rice.jpg",
-    label: "Comfort in a bowl",
-    description:
-      "Golden wok-fried rice with egg, shrimp, pork, and spring onions. A little of everything in every spoonful.",
-  },
-  {
-    name: "Calamansi Cooler",
-    category: "Drinks",
-    price: 65,
-    image: "/menu/calamansi-juice.webp",
-    label: "Fresh & refreshing",
-    description:
-      "Fresh calamansi juice, lightly sweetened and poured over ice. The perfect partner to a warm meal.",
-  },
-] as const;
+
 function App() {
-  const [category, setCategory] = useState<Category>("All dishes");
-  const tableValue = new URLSearchParams(window.location.search).get("table");
-  const table =
-    tableValue && /^(?:[1-9]|10)$/.test(tableValue) ? tableValue : null;
-  const visibleDishes = dishes.filter(
-    (dish) => category === "All dishes" || dish.category === category,
-  );
+  const [category, setCategory] = useState<CategoryId>("mains");
+  const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const table = parseTable(window.location.search);
+
+  useEffect(() => {
+    let frame = 0;
+
+    const updateCategory = () => {
+      frame = 0;
+      const nav = navRef.current;
+      if (!nav) return;
+
+      const threshold = nav.getBoundingClientRect().height + 32;
+      let current: CategoryId = "mains";
+      for (const item of categories) {
+        const section = document.getElementById(item.id);
+        if (section && section.getBoundingClientRect().top <= threshold) {
+          current = item.id;
+        }
+      }
+      if (
+        window.scrollY + window.innerHeight >=
+        document.documentElement.scrollHeight - 2
+      ) {
+        current = "drinks";
+      }
+      setCategory(current);
+    };
+
+    const queueUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateCategory);
+    };
+
+    const nav = navRef.current;
+    const resizeObserver = new ResizeObserver(() => {
+      if (!nav) return;
+      document.documentElement.style.setProperty(
+        "--category-offset",
+        `${nav.getBoundingClientRect().height + 24}px`,
+      );
+      queueUpdate();
+    });
+    if (nav) resizeObserver.observe(nav);
+
+    updateCategory();
+    window.addEventListener("scroll", queueUpdate, { passive: true });
+    window.addEventListener("resize", queueUpdate);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", queueUpdate);
+      window.removeEventListener("resize", queueUpdate);
+      resizeObserver.disconnect();
+      document.documentElement.style.removeProperty("--category-offset");
+    };
+  }, []);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    const link = nav?.querySelector<HTMLElement>(`a[href="#${category}"]`);
+    if (!nav || !link) return;
+    const navBounds = nav.getBoundingClientRect();
+    const linkBounds = link.getBoundingClientRect();
+    if (linkBounds.left < navBounds.left || linkBounds.right > navBounds.right) {
+      nav.scrollLeft += linkBounds.left - navBounds.left;
+    }
+  }, [category]);
   return (
     <>
       <a className="skip-link" href="#menu">
         Skip to menu
       </a>
-      <div className="top-strip">FRESH · FAST · MADE WITH LOVE</div>
+      <div className="top-strip">{restaurant.tagline}</div>
       <header className="brand-header">
         <div className="brand-note">
           <Soup size={26} strokeWidth={1.3} />
@@ -64,18 +89,22 @@ function App() {
             Made fresh.
           </span>
         </div>
-        <a className="brand" href="/menu" aria-label="Ahma menu">
+        <a
+          className="brand"
+          href={table ? `/menu?table=${table}` : "/menu"}
+          aria-label={`${restaurant.name} menu`}
+        >
           <span className="wordmark">
-            AHMA
+            {restaurant.wordmark}
             <span className="brand-flower" aria-hidden="true">
               ✿
             </span>
           </span>
-          <span className="brand-subtitle">CHINESE TAKE OUT</span>
+          <span className="brand-subtitle">{restaurant.subtitle}</span>
         </a>
         <div className="table-label">
           <MapPin size={17} strokeWidth={1.5} />
-          <span>{table ? `Table ${table}` : "Welcome to Ahma"}</span>
+          <span>{table ? `Table ${table}` : `Welcome to ${restaurant.name}`}</span>
         </div>
       </header>
       <main id="menu">
@@ -87,7 +116,7 @@ function App() {
               <br className="mobile-break" /> A lot of flavor.
             </h1>
             <p className="intro-copy">
-              Chinese favorites, cooked fresh and made with heart.
+              {restaurant.introduction}
             </p>
           </div>
           <div className="love-stamp">
@@ -99,67 +128,50 @@ function App() {
             </span>
           </div>
         </section>
-        <nav className="category-nav" aria-label="Menu categories">
+        <nav ref={navRef} className="category-nav" aria-label="Menu categories">
           {categories.map((item) => (
-            <button
-              key={item}
-              type="button"
-              aria-pressed={category === item}
-              className={category === item ? "selected" : ""}
-              onClick={() => setCategory(item)}
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              aria-current={category === item.id ? "location" : undefined}
+              className={category === item.id ? "selected" : ""}
             >
-              {item}
-              {item === "All dishes" && (
-                <span className="category-count">{dishes.length}</span>
-              )}
-            </button>
+              {item.name}
+            </a>
           ))}
         </nav>
-        <div className="section-heading">
-          <h2>
-            {category === "All dishes"
-              ? "Something delicious awaits"
-              : category}
-          </h2>
-          <span aria-live="polite">
-            {visibleDishes.length}{" "}
-            {visibleDishes.length === 1 ? "dish" : "dishes"}
-          </span>
-        </div>
-        <div className="dish-grid">
-          {visibleDishes.map((dish, index) => (
-            <article className="dish-card" key={dish.name}>
-              <div className="dish-photo">
-                <img
-                  src={dish.image}
-                  alt={dish.name}
-                  width="720"
-                  height="540"
-                  loading={index < 2 ? "eager" : "lazy"}
-                  style={
-                    dish.name === "Sweet & Sour Chicken"
-                      ? { objectPosition: "center 78%" }
-                      : undefined
-                  }
-                />
-                <span className="dish-category">{dish.category}</span>
+        {categories.map((item) => {
+          const categoryDishes = dishes.filter(dish => dish.category === item.id);
+          return (
+            <section
+              className="menu-category"
+              id={item.id}
+              key={item.id}
+              aria-labelledby={`${item.id}-heading`}
+              tabIndex={-1}
+            >
+              <div className="section-heading">
+                <h2 id={`${item.id}-heading`}>{item.name}</h2>
+                <span>{categoryDishes.length} dishes</span>
               </div>
-              <div className="dish-content">
-                <p className="dish-label">{dish.label}</p>
-                <div className="dish-title">
-                  <h3>{dish.name}</h3>
-                  <span className="price">₱{dish.price}</span>
-                </div>
-                <p className="dish-description">{dish.description}</p>
+              <div className="dish-grid">
+                {categoryDishes.map((dish, index) => (
+                  <DishCard
+                    key={dish.id}
+                    dish={dish}
+                    eager={item.id === "mains" && index < 2}
+                    onSelect={setSelectedDish}
+                  />
+                ))}
               </div>
-            </article>
-          ))}
-        </div>
+            </section>
+          );
+        })}
         <div className="kitchen-note">
           <Soup size={21} strokeWidth={1.4} />
           <p>
             Made fresh, just for you.{" "}
-            <span>Please let our team know about any food allergies.</span>
+            <span>{restaurant.allergyNote}</span>
           </p>
         </div>
       </main>
@@ -179,11 +191,17 @@ function App() {
           </span>
         </div>
         <div className="footer-bottom">
-          <span className="footer-brand">AHMA</span>
-          <span>Good food. Warm hearts.</span>
+          <span className="footer-brand">{restaurant.wordmark}</span>
+          <span>{restaurant.farewell}</span>
           <span>Demo menu · Prices in PHP</span>
         </div>
       </footer>
+      {selectedDish && (
+        <DishDialog
+          dish={selectedDish}
+          onClose={() => setSelectedDish(null)}
+        />
+      )}
     </>
   );
 }

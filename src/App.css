@@ -114,13 +114,19 @@ h1 {
   margin-left: 24px;
 }
 .category-nav {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--cream);
+  padding-top: 16px;
   display: flex;
   gap: 8px;
   border-bottom: 1px solid var(--line);
   padding-bottom: 19px;
   overflow-x: auto;
 }
-.category-nav button {
+.category-nav a {
+  text-decoration: none;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -135,10 +141,10 @@ h1 {
     background 0.15s,
     color 0.15s;
 }
-.category-nav button:hover {
+.category-nav a:hover {
   background: #e8eadc;
 }
-.category-nav button.selected {
+.category-nav a.selected {
   background: var(--sage);
   border-color: var(--sage);
   color: white;
@@ -172,10 +178,128 @@ h1 {
   gap: 24px;
 }
 .dish-card {
+  position: relative;
   border: 1px solid var(--line);
   background: #fffaf0;
   border-radius: 5px;
   overflow: hidden;
+}
+.menu-category {
+  scroll-margin-top: var(--category-offset, 100px);
+  padding-bottom: 12px;
+}
+.dish-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--red);
+  font-size: 0.875rem;
+}
+.dish-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.dish-open:focus-visible {
+  outline: none;
+}
+.dish-open:focus-visible::after {
+  outline: 3px solid var(--sage);
+  outline-offset: -4px;
+}
+.unavailable {
+  color: #8e2b22;
+  background: #fae6da;
+}
+.dish-dialog {
+  width: min(640px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--cream);
+  overscroll-behavior: contain;
+}
+.dish-dialog::backdrop {
+  background: rgb(30 28 22 / 65%);
+}
+.dialog-close {
+  position: sticky;
+  top: 12px;
+  float: right;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 12px 12px -56px 0;
+  z-index: 1;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--cream);
+  color: var(--ink);
+}
+.dialog-photo {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+.dialog-content {
+  padding: 28px;
+}
+.dialog-content h2 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+.dialog-content .price {
+  font-size: 1.3rem;
+}
+.availability {
+  display: inline-block;
+  padding: 6px 10px;
+  margin-top: 16px;
+  color: #405039;
+  background: #e9eadf;
+  font-size: 0.875rem;
+}
+.availability.unavailable {
+  color: #8e2b22;
+  background: #fae6da;
+}
+.dish-portion {
+  margin-top: 16px;
+  font-size: 0.875rem;
+}
+.dialog-note {
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  color: #626a59;
+  line-height: 1.6;
+  font-size: 0.875rem;
+}
+.photo-credit {
+  margin-top: 16px;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: #706e60;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+@media (max-width: 580px) {
+  .dialog-content {
+    padding: 22px;
+  }
 }
 .dish-photo {
   position: relative;
@@ -368,7 +492,7 @@ footer {
     gap: 7px;
     padding-bottom: 16px;
   }
-  .category-nav button {
+  .category-nav a {
     padding: 10px 16px;
   }
   .section-heading {
@@ -428,3 +552,4 @@ footer {
     transition: none !important;
   }
 }
+
