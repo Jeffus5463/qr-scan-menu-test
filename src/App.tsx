@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Flame, Heart, Leaf, MapPin, Soup } from "lucide-react";
-import { categories, dishes, restaurant, type CategoryId, type Dish } from "./menu";
+import {
+  categories,
+  dishes,
+  restaurant,
+  type CategoryId,
+  type Dish,
+} from "./menu";
 import { parseTable } from "./menu-utils";
 import { DishCard } from "./DishCard";
 import { DishDialog } from "./DishDialog";
+import { TablesPage } from "./TablesPage";
 import "./App.css";
 
-function App() {
+function MenuPage() {
   const [category, setCategory] = useState<CategoryId>("mains");
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -70,7 +77,10 @@ function App() {
     if (!nav || !link) return;
     const navBounds = nav.getBoundingClientRect();
     const linkBounds = link.getBoundingClientRect();
-    if (linkBounds.left < navBounds.left || linkBounds.right > navBounds.right) {
+    if (
+      linkBounds.left < navBounds.left ||
+      linkBounds.right > navBounds.right
+    ) {
       nav.scrollLeft += linkBounds.left - navBounds.left;
     }
   }, [category]);
@@ -104,7 +114,9 @@ function App() {
         </a>
         <div className="table-label">
           <MapPin size={17} strokeWidth={1.5} />
-          <span>{table ? `Table ${table}` : `Welcome to ${restaurant.name}`}</span>
+          <span>
+            {table ? `Table ${table}` : `Welcome to ${restaurant.name}`}
+          </span>
         </div>
       </header>
       <main id="menu">
@@ -115,9 +127,7 @@ function App() {
               A little comfort.
               <br className="mobile-break" /> A lot of flavor.
             </h1>
-            <p className="intro-copy">
-              {restaurant.introduction}
-            </p>
+            <p className="intro-copy">{restaurant.introduction}</p>
           </div>
           <div className="love-stamp">
             <Heart size={23} strokeWidth={1.3} />
@@ -141,7 +151,9 @@ function App() {
           ))}
         </nav>
         {categories.map((item) => {
-          const categoryDishes = dishes.filter(dish => dish.category === item.id);
+          const categoryDishes = dishes.filter(
+            (dish) => dish.category === item.id,
+          );
           return (
             <section
               className="menu-category"
@@ -170,8 +182,7 @@ function App() {
         <div className="kitchen-note">
           <Soup size={21} strokeWidth={1.4} />
           <p>
-            Made fresh, just for you.{" "}
-            <span>{restaurant.allergyNote}</span>
+            Made fresh, just for you. <span>{restaurant.allergyNote}</span>
           </p>
         </div>
       </main>
@@ -197,12 +208,32 @@ function App() {
         </div>
       </footer>
       {selectedDish && (
-        <DishDialog
-          dish={selectedDish}
-          onClose={() => setSelectedDish(null)}
-        />
+        <DishDialog dish={selectedDish} onClose={() => setSelectedDish(null)} />
       )}
     </>
   );
 }
-export default App;
+export default function App() {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+
+  useEffect(() => {
+    document.title =
+      path === "/tables"
+        ? `${restaurant.name} · Table QR Cards`
+        : `${restaurant.name} · Chinese Take Out`;
+  }, [path]);
+
+  if (path === "/tables") return <TablesPage />;
+  if (path === "/" || path === "/menu") return <MenuPage />;
+
+  return (
+    <main className="menu-intro">
+      <div>
+        <h1>Page not found</h1>
+        <p className="intro-copy">
+          <a href="/menu">Back to the menu</a>
+        </p>
+      </div>
+    </main>
+  );
+}
